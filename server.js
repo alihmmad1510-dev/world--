@@ -2,15 +2,9 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
 
 const PORT = process.env.PORT || 3000;
-const app    = express();
+const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -21,72 +15,18 @@ const io = new Server(server, {
 });
 
 app.use(cors());
+app.use(express.json());
 
 /* ============================================================
-   إيجاد ملف index.html في كل الأماكن المحتملة
-   ============================================================ */
-const possiblePaths = [
-  path.join(__dirname, 'index.html'),
-  path.join(__dirname, 'public', 'index.html'),
-  path.join(__dirname, 'dist', 'index.html'),
-  path.join(process.cwd(), 'index.html'),
-  path.join(process.cwd(), 'public', 'index.html')
-];
-
-let INDEX_FILE = null;
-for (const p of possiblePaths) {
-  if (fs.existsSync(p)) {
-    INDEX_FILE = p;
-    console.log(`✅ Found index.html at: ${p}`);
-    break;
-  }
-}
-
-if (!INDEX_FILE) {
-  console.log('❌ index.html NOT FOUND!');
-  console.log('📁 __dirname:', __dirname);
-  console.log('📁 cwd:', process.cwd());
-  try {
-    console.log('📂 Files in __dirname:', fs.readdirSync(__dirname));
-  } catch(e) {}
-}
-
-/* ============================================================
-   خدمة الملفات الثابتة
-   ============================================================ */
-app.use(express.static(__dirname));
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(process.cwd()));
-
-/* ============================================================
-   صفحة رئيسية — تخدم index.html من أي مكان
+   الصفحة الرئيسية
    ============================================================ */
 app.get('/', (req, res) => {
-  if (INDEX_FILE && fs.existsSync(INDEX_FILE)) {
-    res.sendFile(INDEX_FILE);
-  } else {
-    res.status(404).send(`
-      <!DOCTYPE html>
-      <html dir="rtl"><head><meta charset="UTF-8">
-      <title>خطأ — index.html غير موجود</title>
-      <style>
-        body { font-family: Arial; background:#111; color:#fff; padding:40px; text-align:center; }
-        h1 { color: #ff6666; }
-        code { background:#222; padding:4px 8px; border-radius:4px; color:#ffcc00; }
-        ul { text-align:right; max-width:600px; margin:20px auto; line-height:2; }
-      </style></head><body>
-        <h1>⚠️ index.html غير موجود</h1>
-        <p>السيرفر شغال، لكن ما لقاش ملف <code>index.html</code></p>
-        <p><b>تأكد إن الملفات في نفس المجلد على GitHub:</b></p>
-        <ul>
-          <li><code>index.html</code> ← في الجذر مباشرة</li>
-          <li><code>server.js</code></li>
-          <li><code>package.json</code></li>
-        </ul>
-        <p>المجلد الحالي: <code>${__dirname}</code></p>
-      </body></html>
-    `);
-  }
+  res.json({
+    ok: true,
+    service: 'world-8',
+    message: 'Server is running',
+    rooms: rooms.size
+  });
 });
 
 /* ============================================================
@@ -95,8 +35,7 @@ app.get('/', (req, res) => {
 app.get('/status', (req, res) => {
   res.json({
     ok: true,
-    indexFound: !!INDEX_FILE,
-    indexPath: INDEX_FILE,
+    service: 'world-8',
     rooms: rooms.size,
     totalPlayers: [...rooms.values()].reduce((s, r) => s + r.players.size, 0),
     uptime: Math.floor(process.uptime())
@@ -109,7 +48,9 @@ app.get('/status', (req, res) => {
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function genCode() {
   let s = '';
-  for (let i = 0; i < 6; i++) s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  for (let i = 0; i < 6; i++) {
+    s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  }
   return s;
 }
 
@@ -119,10 +60,14 @@ io.on('connection', (socket) => {
   console.log('[+] Connected:', socket.id);
   let currentRoom = null;
 
+  /* -------- إنشاء غرفة -------- */
   socket.on('createRoom', (data, cb) => {
     try {
       let code, attempts = 0;
-      do { code = genCode(); attempts++; } while (rooms.has(code) && attempts < 30);
+      do {
+        code = genCode();
+        attempts++;
+      } while (rooms.has(code) && attempts < 30);
 
       rooms.set(code, {
         hostId: socket.id,
@@ -142,16 +87,19 @@ io.on('connection', (socket) => {
     }
   });
 
+  /* -------- الانضمام لغرفة -------- */
   socket.on('joinRoom', ({ code, playerInfo } = {}, cb) => {
     try {
       code = (code || '').toUpperCase().trim();
       const room = rooms.get(code);
+
       if (!room) {
         const reply = { ok: false, error: 'ROOM_NOT_FOUND' };
         if (typeof cb === 'function') cb(reply);
         socket.emit('joinError', reply);
         return;
       }
+
       if (room.players.size >= 16) {
         const reply = { ok: false, error: 'ROOM_FULL' };
         if (typeof cb === 'function') cb(reply);
@@ -173,7 +121,9 @@ io.on('connection', (socket) => {
       currentRoom = code;
 
       const existing = [];
-      room.players.forEach((p, id) => { if (id !== socket.id) existing.push(p); });
+      room.players.forEach((p, id) => {
+        if (id !== socket.id) existing.push(p);
+      });
 
       const reply = { ok: true, code, players: existing, you: socket.id };
       if (typeof cb === 'function') cb(reply);
@@ -185,6 +135,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  /* -------- تحديث حالة اللاعب -------- */
   socket.on('playerState', (state) => {
     if (!currentRoom) return;
     const room = rooms.get(currentRoom);
@@ -209,6 +160,7 @@ io.on('connection', (socket) => {
     });
   });
 
+  /* -------- مغادرة -------- */
   socket.on('leaveRoom', () => leaveRoom());
 
   function leaveRoom() {
@@ -217,6 +169,7 @@ io.on('connection', (socket) => {
     if (room) {
       room.players.delete(socket.id);
       socket.to(currentRoom).emit('playerLeft', { id: socket.id });
+
       if (room.players.size === 0) {
         rooms.delete(currentRoom);
         console.log(`[ROOM] ${currentRoom} deleted`);
@@ -236,11 +189,16 @@ io.on('connection', (socket) => {
   });
 });
 
-/* تنظيف الغرف الميتة */
+/* ============================================================
+   تنظيف الغرف الميتة
+   ============================================================ */
 setInterval(() => {
   const now = Date.now();
   rooms.forEach((room, code) => {
-    if (room.players.size === 0) { rooms.delete(code); return; }
+    if (room.players.size === 0) {
+      rooms.delete(code);
+      return;
+    }
     room.players.forEach((p, id) => {
       if (now - p.lastSeen > 60000) {
         room.players.delete(id);
@@ -254,7 +212,5 @@ setInterval(() => {
    تشغيل السيرفر
    ============================================================ */
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🚗 GTA 6 City running on port ${PORT}`);
-  console.log(`   __dirname: ${__dirname}`);
-  console.log(`   index.html: ${INDEX_FILE || 'NOT FOUND'}\n`);
+  console.log(`\n🚗 World-8 Server running on port ${PORT}\n`);
 });
