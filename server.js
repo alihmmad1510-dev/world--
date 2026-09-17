@@ -3,6 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,7 +21,87 @@ const io = new Server(server, {
 });
 
 app.use(cors());
+
+/* ============================================================
+   إيجاد ملف index.html في كل الأماكن المحتملة
+   ============================================================ */
+const possiblePaths = [
+  path.join(__dirname, 'index.html'),
+  path.join(__dirname, 'public', 'index.html'),
+  path.join(__dirname, 'dist', 'index.html'),
+  path.join(process.cwd(), 'index.html'),
+  path.join(process.cwd(), 'public', 'index.html')
+];
+
+let INDEX_FILE = null;
+for (const p of possiblePaths) {
+  if (fs.existsSync(p)) {
+    INDEX_FILE = p;
+    console.log(`✅ Found index.html at: ${p}`);
+    break;
+  }
+}
+
+if (!INDEX_FILE) {
+  console.log('❌ index.html NOT FOUND!');
+  console.log('📁 __dirname:', __dirname);
+  console.log('📁 cwd:', process.cwd());
+  try {
+    console.log('📂 Files in __dirname:', fs.readdirSync(__dirname));
+  } catch(e) {}
+}
+
+/* ============================================================
+   خدمة الملفات الثابتة
+   ============================================================ */
 app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(process.cwd()));
+
+/* ============================================================
+   صفحة رئيسية — تخدم index.html من أي مكان
+   ============================================================ */
+app.get('/', (req, res) => {
+  if (INDEX_FILE && fs.existsSync(INDEX_FILE)) {
+    res.sendFile(INDEX_FILE);
+  } else {
+    res.status(404).send(`
+      <!DOCTYPE html>
+      <html dir="rtl"><head><meta charset="UTF-8">
+      <title>خطأ — index.html غير موجود</title>
+      <style>
+        body { font-family: Arial; background:#111; color:#fff; padding:40px; text-align:center; }
+        h1 { color: #ff6666; }
+        code { background:#222; padding:4px 8px; border-radius:4px; color:#ffcc00; }
+        ul { text-align:right; max-width:600px; margin:20px auto; line-height:2; }
+      </style></head><body>
+        <h1>⚠️ index.html غير موجود</h1>
+        <p>السيرفر شغال، لكن ما لقاش ملف <code>index.html</code></p>
+        <p><b>تأكد إن الملفات في نفس المجلد على GitHub:</b></p>
+        <ul>
+          <li><code>index.html</code> ← في الجذر مباشرة</li>
+          <li><code>server.js</code></li>
+          <li><code>package.json</code></li>
+        </ul>
+        <p>المجلد الحالي: <code>${__dirname}</code></p>
+      </body></html>
+    `);
+  }
+});
+
+/* ============================================================
+   Health check
+   ============================================================ */
+app.get('/status', (req, res) => {
+  res.json({
+    ok: true,
+    indexFound: !!INDEX_FILE,
+    indexPath: INDEX_FILE,
+    rooms: rooms.size,
+    totalPlayers: [...rooms.values()].reduce((s, r) => s + r.players.size, 0),
+    uptime: Math.floor(process.uptime())
+  });
+});
 
 /* ============================================================
    إدارة الغرف
@@ -169,16 +250,11 @@ setInterval(() => {
   });
 }, 30000);
 
-/* Health check */
-app.get('/status', (req, res) => {
-  res.json({
-    ok: true,
-    rooms: rooms.size,
-    totalPlayers: [...rooms.values()].reduce((s, r) => s + r.players.size, 0),
-    uptime: Math.floor(process.uptime())
-  });
-});
-
-server.listen(PORT, () => {
-  console.log(`\n🚗 GTA 6 City running on port ${PORT}\n`);
+/* ============================================================
+   تشغيل السيرفر
+   ============================================================ */
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🚗 GTA 6 City running on port ${PORT}`);
+  console.log(`   __dirname: ${__dirname}`);
+  console.log(`   index.html: ${INDEX_FILE || 'NOT FOUND'}\n`);
 });
