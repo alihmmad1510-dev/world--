@@ -1,0 +1,2159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>GTA 6 City — Online</title>
+<style>
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0; height: 100%; overflow: hidden;
+        background-color: #111;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        user-select: none; -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: none;
+    }
+    canvas { display: block; }
+
+    #hud {
+        position: absolute; top: 18px; right: 18px;
+        z-index: 100; pointer-events: none; text-align: right;
+    }
+    #hud .title {
+        font-size: 22px; font-weight: 800;
+        letter-spacing: 1px; color: #ffcc00;
+        text-shadow: 0 2px 8px #000; margin: 0;
+    }
+    #hud .sub {
+        font-size: 13px; margin: 4px 0 0;
+        color: #fff; text-shadow: 0 2px 6px #000; opacity: .9;
+    }
+
+    #clock {
+        position: absolute; top: 18px; left: 18px;
+        color: #fff; background: rgba(0,0,0,.55);
+        border: 1px solid rgba(255,204,0,.4);
+        border-radius: 8px; padding: 8px 14px;
+        font-weight: 700; font-size: 14px;
+        z-index: 100; pointer-events: none;
+        text-shadow: 0 2px 6px #000;
+        font-variant-numeric: tabular-nums;
+    }
+    #clock .sun { color: #ffcc00; margin-left: 6px; }
+
+    #net-status {
+        position: absolute; top: 62px; left: 18px;
+        color: #fff; background: rgba(0,0,0,.6);
+        border: 1px solid rgba(60,220,120,.5);
+        border-radius: 8px; padding: 6px 12px;
+        font-weight: 700; font-size: 12px;
+        z-index: 100; pointer-events: none;
+        display: none;
+    }
+    #net-status.show { display: block; }
+    #net-status .dot {
+        display: inline-block;
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: #3cdc78;
+        box-shadow: 0 0 8px #3cdc78;
+        margin-left: 6px;
+        vertical-align: middle;
+    }
+    #net-status .dot.off { background: #666; box-shadow: none; }
+
+    #crosshair {
+        position: absolute; top: 50%; left: 50%;
+        width: 5px; height: 5px;
+        background: rgba(255,255,255,.85);
+        border-radius: 50%; transform: translate(-50%,-50%);
+        z-index: 100; pointer-events: none;
+    }
+
+    #prompt {
+        position: absolute; bottom: 200px; left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,.75);
+        border: 2px solid #ffcc00;
+        border-radius: 10px; padding: 10px 22px;
+        color: #ffcc00; font-weight: 800;
+        font-size: 16px; letter-spacing: 1px;
+        z-index: 160; pointer-events: none;
+        opacity: 0; transition: opacity .2s;
+        white-space: nowrap;
+    }
+    #prompt.show { opacity: 1; }
+    #prompt span {
+        display: inline-block; background: #ffcc00;
+        color: #111; padding: 2px 8px;
+        border-radius: 5px; margin: 0 4px; font-size: 14px;
+    }
+
+    #joystick {
+        position: absolute; bottom: 32px; left: 32px;
+        width: 148px; height: 148px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.10), rgba(0,0,0,.45) 70%);
+        border: 2px solid rgba(255,204,0,.55);
+        box-shadow: 0 0 26px rgba(0,0,0,.65), inset 0 0 34px rgba(0,0,0,.6);
+        z-index: 150; touch-action: none; cursor: grab;
+    }
+    #stick {
+        position: absolute; top: 50%; left: 50%;
+        width: 64px; height: 64px; border-radius: 50%;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle at 35% 28%, #ffeaa0, #ffc107 55%, #b37700 100%);
+        border: 2px solid rgba(255,255,255,.4);
+        box-shadow: 0 6px 18px rgba(0,0,0,.65);
+        pointer-events: none; will-change: transform;
+    }
+
+    #buttons {
+        position: absolute; bottom: 32px; right: 32px;
+        display: flex; flex-direction: column;
+        align-items: flex-end; gap: 16px; z-index: 150;
+    }
+    .btn {
+        min-width: 120px; padding: 16px 22px;
+        border-radius: 16px; font-family: inherit;
+        font-weight: 900; font-size: 16px;
+        letter-spacing: 1.5px; cursor: pointer;
+        touch-action: none; user-select: none;
+        -webkit-user-select: none;
+        border: 2px solid transparent;
+        transition: transform .08s ease, box-shadow .2s ease;
+        outline: none; display: flex;
+        align-items: center; justify-content: center; gap: 8px;
+    }
+    #btn-enter {
+        color: #1a1200;
+        background: linear-gradient(180deg, #ffd75e, #ffb300);
+        border-color: #ffe9a3;
+        box-shadow: 0 8px 24px rgba(255,179,0,.45);
+    }
+    #btn-enter:active, #btn-enter.pressed {
+        transform: scale(.93);
+        box-shadow: 0 3px 12px rgba(255,179,0,.7);
+    }
+    #btn-online {
+        color: #d9ffe4;
+        background: rgba(16, 38, 24, .85);
+        border-color: rgba(60, 220, 120, .7);
+    }
+    #btn-online.connected {
+        border-color: #3cdc78;
+        box-shadow: 0 0 24px rgba(60,220,120,.5);
+    }
+    #btn-online .dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        background: #3cdc78; box-shadow: 0 0 10px #3cdc78;
+    }
+
+    #wardrobe, #mp-panel {
+        position: fixed; inset: 0;
+        background: radial-gradient(circle at 50% 40%, rgba(20,25,40,.88), rgba(0,0,0,.96));
+        display: none; justify-content: center; align-items: center;
+        z-index: 500;
+    }
+    #wardrobe.show, #mp-panel.show { display: flex; }
+    .panel {
+        color: #fff; text-align: center;
+        padding: 26px 34px; border-radius: 16px;
+        background: rgba(8,8,12,.95);
+        max-width: 520px; width: 92%;
+        max-height: 90vh; overflow-y: auto;
+    }
+    #wardrobe .panel { border: 2px solid #ffcc00; }
+    #mp-panel .panel { border: 2px solid #3cdc78; max-width: 440px; }
+    .panel h2 {
+        margin: 0 0 6px; font-size: 22px; letter-spacing: 1px;
+    }
+    #wardrobe h2 { color: #ffcc00; }
+    #mp-panel h2 { color: #3cdc78; }
+    .hint { margin: 4px 0 18px; font-size: 13px; color: #9aa4b2; }
+
+    #outfits {
+        display: grid; grid-template-columns: repeat(4, 1fr);
+        gap: 12px; margin-bottom: 18px;
+    }
+    .outfit {
+        background: rgba(255,255,255,.04);
+        border: 2px solid rgba(255,255,255,.15);
+        border-radius: 12px; padding: 10px 4px;
+        cursor: pointer; transition: all .15s;
+        display: flex; flex-direction: column;
+        align-items: center; gap: 6px;
+    }
+    .outfit:hover {
+        background: rgba(255,204,0,.1);
+        border-color: rgba(255,204,0,.5);
+    }
+    .outfit.active {
+        background: rgba(255,204,0,.18);
+        border-color: #ffcc00;
+    }
+    .outfit .swatches { display: flex; gap: 4px; }
+    .outfit .swatch {
+        width: 22px; height: 22px; border-radius: 50%;
+        border: 2px solid rgba(0,0,0,.55);
+    }
+    .outfit .label { font-size: 11px; color: #ddd; font-weight: 600; }
+
+    button.primary, button.danger, button.secondary {
+        width: 100%; padding: 14px;
+        border-radius: 12px; font-family: inherit;
+        font-weight: 900; font-size: 15px;
+        letter-spacing: 1px; cursor: pointer;
+        border: 2px solid transparent;
+        transition: transform .08s ease;
+        outline: none;
+    }
+    button.primary {
+        background: linear-gradient(180deg, #6ee89c, #3cdc78);
+        border-color: #a8f0c4; color: #0a2916;
+    }
+    button.danger {
+        background: rgba(255,60,60,.15);
+        border-color: rgba(255,107,107,.5);
+        color: #ff8080; margin-top: 12px;
+    }
+    button.secondary {
+        background: rgba(255,255,255,.06);
+        border-color: rgba(255,255,255,.15);
+        color: #ccc; margin-top: 10px;
+    }
+    button:active { transform: scale(.96); }
+
+    #mp-status {
+        margin: 8px 0 16px; font-size: 13px;
+        padding: 8px 12px; border-radius: 8px;
+        background: rgba(0,0,0,.4);
+        color: #9aa4b2; border: 1px solid rgba(255,255,255,.08);
+    }
+    #mp-status.host { color: #ffcc00; border-color: rgba(255,204,0,.35); }
+    #mp-status.connected { color: #3cdc78; border-color: rgba(60,220,120,.35); }
+    #mp-status.error { color: #ff6b6b; border-color: rgba(255,107,107,.35); }
+
+    .mp-tabs {
+        display: flex; gap: 6px; margin-bottom: 12px;
+        background: rgba(0,0,0,.35); border-radius: 10px; padding: 4px;
+    }
+    .mp-tab {
+        flex: 1; padding: 10px; border-radius: 8px;
+        border: none; background: transparent;
+        color: #9aa4b2; font-family: inherit;
+        font-weight: 700; font-size: 13px; cursor: pointer;
+    }
+    .mp-tab.active {
+        background: rgba(60,220,120,.2);
+        color: #3cdc78;
+    }
+    .mp-tab-content { padding: 4px; }
+    .hint2 { margin: 4px 0 12px; font-size: 12px; color: #9aa4b2; line-height: 1.6; }
+
+    #mp-code-input {
+        width: 100%; padding: 12px 14px;
+        border-radius: 10px;
+        border: 2px solid rgba(60,220,120,.4);
+        background: rgba(0,0,0,.6);
+        color: #fff; font-size: 20px;
+        font-family: 'Courier New', monospace;
+        font-weight: 900; letter-spacing: 4px;
+        text-align: center; text-transform: uppercase;
+        outline: none; margin-bottom: 12px;
+        direction: ltr;
+    }
+    .mp-code-box {
+        background: rgba(0,0,0,.5);
+        border: 2px dashed rgba(255,204,0,.5);
+        border-radius: 12px; padding: 14px;
+        margin-bottom: 12px;
+    }
+    .mp-code-label {
+        font-size: 11px; color: #ffcc00;
+        letter-spacing: 2px; margin-bottom: 6px;
+    }
+    .mp-code {
+        font-family: 'Courier New', monospace;
+        font-size: 34px; font-weight: 900;
+        letter-spacing: 6px; color: #ffcc00;
+        text-shadow: 0 0 18px rgba(255,204,0,.7);
+        margin-bottom: 8px; direction: ltr;
+    }
+    .mp-copy-btn {
+        padding: 6px 14px; border-radius: 8px;
+        background: rgba(255,204,0,.15);
+        border: 1px solid rgba(255,204,0,.5);
+        color: #ffcc00; font-weight: 700;
+        font-size: 12px; cursor: pointer;
+        font-family: inherit;
+    }
+    .mp-players {
+        font-size: 13px; color: #9aa4b2;
+        padding: 10px; margin-top: 4px;
+        background: rgba(0,0,0,.3);
+        border-radius: 8px;
+        text-align: right; direction: rtl;
+        max-height: 120px; overflow-y: auto;
+    }
+    .mp-players b { color: #3cdc78; }
+
+    @media (max-width: 560px) {
+        #joystick { width: 124px; height: 124px; bottom: 22px; left: 22px; }
+        #stick { width: 54px; height: 54px; }
+        #buttons { bottom: 22px; right: 22px; gap: 12px; }
+        .btn { min-width: 104px; padding: 14px 16px; font-size: 14px; }
+        #outfits { grid-template-columns: repeat(3, 1fr); }
+        .mp-code { font-size: 26px; letter-spacing: 4px; }
+    }
+</style>
+</head>
+<body>
+
+<div id="hud">
+    <h1 class="title">المدينة | CITY</h1>
+    <p class="sub">عالم مفتوح · أونلاين</p>
+</div>
+
+<div id="clock">00:00 <span class="sun">☀</span></div>
+<div id="net-status"><span class="dot off"></span> <span id="net-status-text">غير متصل</span></div>
+<div id="crosshair"></div>
+<div id="prompt"><span>ENTER</span> <em id="prompt-text">للدخول</em></div>
+
+<div id="joystick"><div id="stick"></div></div>
+
+<div id="buttons">
+    <button id="btn-enter" class="btn" type="button">ENTER</button>
+    <button id="btn-online" class="btn" type="button"><span class="dot"></span> ONLINE</button>
+</div>
+
+<div id="wardrobe">
+    <div class="panel">
+        <h2>غرفة الملابس</h2>
+        <p class="hint">اختر ملابسك</p>
+        <div id="outfits"></div>
+        <button class="primary" id="wardrobe-close" type="button">إغلاق</button>
+    </div>
+</div>
+
+<div id="mp-panel">
+    <div class="panel">
+        <h2>🌐 اللعب الجماعي</h2>
+        <div id="mp-status">غير متصل</div>
+
+        <div id="mp-form">
+            <div class="mp-tabs">
+                <button class="mp-tab active" data-tab="host" type="button">إنشاء غرفة</button>
+                <button class="mp-tab" data-tab="join" type="button">الانضمام</button>
+            </div>
+            <div id="mp-host-tab" class="mp-tab-content">
+                <p class="hint2">أنشئ غرفة وشارك الكود مع أصدقائك.</p>
+                <button class="primary" id="mp-create" type="button">إنشاء غرفة جديدة</button>
+            </div>
+            <div id="mp-join-tab" class="mp-tab-content" style="display:none">
+                <p class="hint2">أدخل كود الغرفة (6 أحرف).</p>
+                <input id="mp-code-input" type="text" placeholder="ABC123" maxlength="6" autocomplete="off">
+                <button class="primary" id="mp-join" type="button">انضمام</button>
+            </div>
+        </div>
+
+        <div id="mp-room-info" style="display:none">
+            <div class="mp-code-box">
+                <div class="mp-code-label">كود الغرفة</div>
+                <div id="mp-code-display" class="mp-code">------</div>
+                <button id="mp-copy" class="mp-copy-btn" type="button">📋 نسخ</button>
+            </div>
+            <div id="mp-players-list" class="mp-players">لا يوجد لاعبون آخرون بعد</div>
+            <button class="danger" id="mp-disconnect" type="button">قطع الاتصال</button>
+        </div>
+
+        <button class="secondary" id="mp-close" type="button">إغلاق</button>
+    </div>
+</div>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+    }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ============================================================
+   عنوان السيرفر
+   ============================================================ */
+const SERVER_URL = (location.protocol === 'http:' || location.protocol === 'https:')
+    ? location.origin
+    : 'http://localhost:3000';
+
+console.log('[ONLINE] Server:', SERVER_URL);
+
+/* ============================================================
+   ثوابت المدينة
+   ============================================================ */
+const CELL      = 56;
+const ROAD_W    = 16;
+const CURB_H    = 0.3;
+const TILE      = 8;
+const RENDER_R  = 3;
+
+const PARK_BLOCK   = { i: -1, j: -1 };
+const DEALER_BLOCK = { i: 0,  j: 0  };
+const HOME_BLOCK   = { i: -1, j: 0  };
+
+const HOME_CX = (HOME_BLOCK.i + 0.5) * CELL;
+const HOME_CZ = (HOME_BLOCK.j + 0.5) * CELL;
+const HOME_DOOR_POS = new THREE.Vector3(HOME_CX, CURB_H, HOME_CZ + 4);
+
+/* ============================================================
+   المشهد
+   ============================================================ */
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xbcd6ea, 150, 470);
+
+const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 3000);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
+
+/* ============================================================
+   أدوات Canvas
+   ============================================================ */
+function makeCanvas(size, draw) {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    draw(c.getContext('2d'), size);
+    return c;
+}
+function texFromCanvas(canvas, rx=1, ry=1, srgb=true) {
+    const t = new THREE.CanvasTexture(canvas);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    t.repeat.set(rx, ry);
+    t.anisotropy = MAX_ANISO;
+    return t;
+}
+function noise(ctx, size, count, alpha, maxVal) {
+    for (let i = 0; i < count; i++) {
+        const g = Math.floor(Math.random()*maxVal);
+        ctx.fillStyle = `rgba(${g},${g},${g+6},${alpha})`;
+        ctx.fillRect(Math.random()*size, Math.random()*size, 2, 2);
+    }
+}
+
+function makeRoadTexture() {
+    const S = 256;
+    const c = makeCanvas(S, (ctx) => {
+        ctx.fillStyle = '#2c2c31'; ctx.fillRect(0,0,S,S);
+        noise(ctx, S, 5000, 0.22, 70);
+        ctx.fillStyle = 'rgba(228,228,215,0.72)';
+        ctx.fillRect(0, 9, S, 5);
+        ctx.fillRect(0, S-14, S, 5);
+        ctx.fillStyle = 'rgba(245,205,90,0.92)';
+        ctx.fillRect(0, S/2-4, S*0.52, 8);
+    });
+    return texFromCanvas(c);
+}
+
+function makeIntersectionTexture() {
+    const S = 256;
+    const c = makeCanvas(S, (ctx) => {
+        ctx.fillStyle = '#2c2c31'; ctx.fillRect(0,0,S,S);
+        noise(ctx, S, 4000, 0.22, 70);
+        const M = 8, BAND = 44, STRIPE = 13, GAP = 26;
+        ctx.fillStyle = 'rgba(235,235,225,0.82)';
+        for (let x = M; x < S - M - STRIPE + 1; x += GAP) {
+            ctx.fillRect(x, M, STRIPE, BAND);
+            ctx.fillRect(x, S-M-BAND, STRIPE, BAND);
+        }
+        for (let y = M+BAND+GAP; y < S-M-BAND-GAP+1; y += GAP) {
+            ctx.fillRect(M, y, BAND, STRIPE);
+            ctx.fillRect(S-M-BAND, y, BAND, STRIPE);
+        }
+    });
+    return texFromCanvas(c);
+}
+
+function makeFacadeTextures(litProb = 0.42) {
+    const S = 256, COLS = 4, ROWS = 4;
+    const lit = [];
+    for (let i = 0; i < COLS*ROWS; i++) lit.push(Math.random() < litProb);
+    const cw = S/COLS, ch = S/ROWS;
+
+    const colorCanvas = makeCanvas(S, (ctx) => {
+        ctx.fillStyle = '#0a0a0e'; ctx.fillRect(0,0,S,S);
+        noise(ctx, S, 2600, 0.35, 22);
+        for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) {
+            const isLit = lit[j*COLS+i];
+            const wx = i*cw + cw*0.20, wy = j*ch + ch*0.16;
+            const ww = cw*0.60, wh = ch*0.62;
+            ctx.fillStyle = 'rgba(46,48,56,0.9)';
+            ctx.fillRect(wx-3, wy-3, ww+6, wh+6);
+            ctx.fillStyle = isLit ? '#ffd38c' : '#0c1420';
+            ctx.fillRect(wx, wy, ww, wh);
+        }
+    });
+
+    const emissiveCanvas = makeCanvas(S, (ctx) => {
+        ctx.fillStyle = '#000'; ctx.fillRect(0,0,S,S);
+        for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) {
+            if (!lit[j*COLS+i]) continue;
+            const wx = i*cw + cw*0.20, wy = j*ch + ch*0.16;
+            const ww = cw*0.60, wh = ch*0.62;
+            ctx.fillStyle = '#ffc568';
+            ctx.fillRect(wx, wy, ww, wh);
+        }
+    });
+
+    return { map: texFromCanvas(colorCanvas), emissiveMap: texFromCanvas(emissiveCanvas) };
+}
+
+function makeHouseTextures(litProb = 0.65) {
+    const S = 256, COLS = 2, ROWS = 3;
+    const lit = [];
+    for (let i = 0; i < COLS*ROWS; i++) lit.push(Math.random() < litProb);
+    const cw = S/COLS, ch = S/ROWS;
+
+    const colorCanvas = makeCanvas(S, (ctx) => {
+        ctx.fillStyle = '#8a5238'; ctx.fillRect(0,0,S,S);
+        const bw = 32, bh = 16;
+        for (let y = 0; y < S; y += bh) {
+            const off = ((y/bh) % 2 === 0) ? 0 : bw/2;
+            for (let x = -off; x < S; x += bw) {
+                const shade = 0.85 + Math.random()*0.25;
+                ctx.fillStyle = `rgb(${Math.floor(120*shade)},${Math.floor(65*shade)},${Math.floor(45*shade)})`;
+                ctx.fillRect(x+1, y+1, bw-2, bh-2);
+            }
+        }
+        for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) {
+            const isLit = lit[j*COLS+i];
+            const wx = i*cw + cw*0.18, wy = j*ch + ch*0.18;
+            const ww = cw*0.64, wh = ch*0.60;
+            ctx.fillStyle = '#3a2410';
+            ctx.fillRect(wx-4, wy-4, ww+8, wh+8);
+            ctx.fillStyle = isLit ? '#ffd38c' : '#1a2028';
+            ctx.fillRect(wx, wy, ww, wh);
+        }
+    });
+
+    const emissiveCanvas = makeCanvas(S, (ctx) => {
+        ctx.fillStyle = '#000'; ctx.fillRect(0,0,S,S);
+        for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) {
+            if (!lit[j*COLS+i]) continue;
+            const wx = i*cw + cw*0.18, wy = j*ch + ch*0.18;
+            const ww = cw*0.64, wh = ch*0.60;
+            ctx.fillStyle = '#ffc568';
+            ctx.fillRect(wx, wy, ww, wh);
+        }
+    });
+
+    return { map: texFromCanvas(colorCanvas), emissiveMap: texFromCanvas(emissiveCanvas) };
+}
+
+function makeConcreteTexture() {
+    const S = 256;
+    const c = makeCanvas(S, (ctx) => {
+        ctx.fillStyle = '#8e8e88'; ctx.fillRect(0,0,S,S);
+        noise(ctx, S, 6000, 0.25, 190);
+    });
+    return texFromCanvas(c, 10, 10);
+}
+function makeGrassTexture() {
+    const S = 256;
+    const c = makeCanvas(S, (ctx) => {
+        ctx.fillStyle = '#3f7a35'; ctx.fillRect(0,0,S,S);
+        for (let i = 0; i < 9000; i++) {
+            const g = 60 + Math.random()*90;
+            ctx.fillStyle = `rgba(${30+Math.random()*40},${g},${25+Math.random()*35},0.6)`;
+            ctx.fillRect(Math.random()*S, Math.random()*S, 2, 3);
+        }
+    });
+    return texFromCanvas(c, 8, 8);
+}
+
+/* ============================================================
+   الإضاءة + السماء
+   ============================================================ */
+const hemi = new THREE.HemisphereLight(0xcfe6ff, 0x3a3a36, 1.15);
+scene.add(hemi);
+
+const sun = new THREE.DirectionalLight(0xfff2da, 2.6);
+sun.position.set(90, 150, 70);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -150; sun.shadow.camera.right = 150;
+sun.shadow.camera.top = 150; sun.shadow.camera.bottom = -150;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 520;
+sun.shadow.bias = -0.0006;
+sun.shadow.normalBias = 0.02;
+scene.add(sun); scene.add(sun.target);
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.35);
+scene.add(ambient);
+
+const skyUniforms = {
+    uTop: { value: new THREE.Color(0x1a5aa8) },
+    uMid: { value: new THREE.Color(0x5f9fd4) },
+    uBot: { value: new THREE.Color(0xdfe9f2) }
+};
+const skyMat = new THREE.ShaderMaterial({
+    uniforms: skyUniforms,
+    vertexShader: `
+        varying vec3 vWorldPos;
+        void main() {
+            vec4 wp = modelMatrix * vec4(position, 1.0);
+            vWorldPos = wp.xyz;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform vec3 uTop; uniform vec3 uMid; uniform vec3 uBot;
+        varying vec3 vWorldPos;
+        void main() {
+            float h = normalize(vWorldPos).y;
+            vec3 col = h > 0.0 ? mix(uMid, uTop, pow(h, 0.65)) : mix(uMid, uBot, pow(-h, 0.5));
+            gl_FragColor = vec4(col, 1.0);
+        }
+    `,
+    side: THREE.BackSide, depthWrite: false, fog: false
+});
+const sky = new THREE.Mesh(new THREE.SphereGeometry(1400, 32, 24), skyMat);
+scene.add(sky);
+
+/* ============================================================
+   المواد المشتركة
+   ============================================================ */
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x1e1e22, roughness: 1.0 });
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const roadTex = makeRoadTexture();
+const intersectionMat = new THREE.MeshStandardMaterial({ map: makeIntersectionTexture(), roughness: 0.95 });
+const sidewalkMat = new THREE.MeshStandardMaterial({ map: makeConcreteTexture(), color: 0xbfbfb8, roughness: 0.95 });
+
+const facadeMats = [];
+for (let i = 0; i < 4; i++) {
+    const { map, emissiveMap } = makeFacadeTextures(0.38);
+    facadeMats.push(new THREE.MeshStandardMaterial({
+        map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 1.15,
+        roughness: 0.48, metalness: 0.15
+    }));
+}
+const houseMats = [];
+for (let i = 0; i < 3; i++) {
+    const { map, emissiveMap } = makeHouseTextures(0.7);
+    houseMats.push(new THREE.MeshStandardMaterial({
+        map, emissiveMap, emissive: 0xffffff, emissiveIntensity: 1.15,
+        roughness: 0.85, metalness: 0.05
+    }));
+}
+
+const grassMat = new THREE.MeshStandardMaterial({ map: makeGrassTexture(), roughness: 1.0 });
+const pathMat  = new THREE.MeshStandardMaterial({ color: 0xc7bfa8, roughness: 0.95 });
+const stoneMat = new THREE.MeshStandardMaterial({ color: 0xb2ada0, roughness: 0.85 });
+const woodMat  = new THREE.MeshStandardMaterial({ color: 0x6d4c33, roughness: 0.9 });
+const metalMat = new THREE.MeshStandardMaterial({ color: 0x2b2b2f, roughness: 0.45, metalness: 0.8 });
+const leafMats = [0x2e7d32, 0x3b8c3f, 0x1b5e20].map(c =>
+    new THREE.MeshStandardMaterial({ color: c, roughness: 0.95, flatShading: true }));
+const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 0.95 });
+
+const lampHeadMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, emissive: 0xffd98a, emissiveIntensity: 0.2, roughness: 0.4 });
+const lampBulbMat = new THREE.MeshStandardMaterial({ color: 0xfff0c0, emissive: 0xffcc66, emissiveIntensity: 0.2, roughness: 0.4 });
+
+/* ============================================================
+   توليد المدينة
+   ============================================================ */
+const SIDEWALK_GEO = new THREE.BoxGeometry(40, CURB_H, 40);
+const boxGeoCache = new Map();
+function getBoxGeo(w, h, d) {
+    const key = `${w}_${h}_${d}`;
+    if (boxGeoCache.has(key)) return boxGeoCache.get(key);
+    const g = new THREE.BoxGeometry(w, h, d);
+    boxGeoCache.set(key, g);
+    return g;
+}
+
+const generatedBlocks = new Map();
+const generatedRoads = new Map();
+const generatedIntersections = new Map();
+const streetLights = new Map();
+
+function genIntersection(i, j) {
+    const key = `x_${i}_${j}`;
+    if (generatedIntersections.has(key)) return;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_W, ROAD_W), intersectionMat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(i*CELL, 0.025, j*CELL);
+    m.receiveShadow = true;
+    scene.add(m);
+    generatedIntersections.set(key, { mesh: m });
+}
+
+function genRoadH(i, j) {
+    const key = `h_${i}_${j}`;
+    if (generatedRoads.has(key)) return;
+    const x1 = i*CELL + ROAD_W/2;
+    const x2 = (i+1)*CELL - ROAD_W/2;
+    const len = x2 - x1;
+    if (len <= 1) return;
+    const tex = roadTex.clone();
+    tex.needsUpdate = true;
+    tex.repeat.set(len / 16, 1);
+    tex.anisotropy = MAX_ANISO;
+    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(len, ROAD_W), mat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.set((x1+x2)/2, 0.02, j*CELL);
+    m.receiveShadow = true;
+    scene.add(m);
+    generatedRoads.set(key, { mesh: m });
+}
+
+function genRoadV(i, j) {
+    const key = `v_${i}_${j}`;
+    if (generatedRoads.has(key)) return;
+    const z1 = j*CELL + ROAD_W/2;
+    const z2 = (j+1)*CELL - ROAD_W/2;
+    const len = z2 - z1;
+    if (len <= 1) return;
+    const tex = roadTex.clone();
+    tex.needsUpdate = true;
+    tex.repeat.set(len / 16, 1);
+    tex.anisotropy = MAX_ANISO;
+    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(len, ROAD_W), mat);
+    m.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
+    m.position.set(i*CELL, 0.02, (z1+z2)/2);
+    m.receiveShadow = true;
+    scene.add(m);
+    generatedRoads.set(key, { mesh: m });
+}
+
+function addBuilding(group, x, z, w, h, d, isHouse, colliders) {
+    const geoCopy = getBoxGeo(w, h, d).clone();
+    const uv = geoCopy.attributes.uv;
+    const scaleFace = (start, su, sv) => {
+        for (let i = start; i < start + 4; i++) uv.setXY(i, uv.getX(i)*su, uv.getY(i)*sv);
+    };
+    scaleFace(0,  d/TILE, h/TILE);
+    scaleFace(4,  d/TILE, h/TILE);
+    scaleFace(16, w/TILE, h/TILE);
+    scaleFace(20, w/TILE, h/TILE);
+    uv.needsUpdate = true;
+
+    const mat = isHouse
+        ? houseMats[Math.floor(Math.random()*houseMats.length)]
+        : facadeMats[Math.floor(Math.random()*facadeMats.length)];
+
+    const mesh = new THREE.Mesh(geoCopy, mat);
+    mesh.position.set(x, CURB_H + h/2, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+
+    colliders.push({ minX: x - w/2, maxX: x + w/2, minZ: z - d/2, maxZ: z + d/2 });
+}
+
+function pickLayout() {
+    const r = Math.random();
+    if (r < 0.18) return { items: [{ x: 0, z: 0, w: 26, d: 26, h: [18, 44], house: false }] };
+    if (r < 0.34) return { items: [
+        { x: -8, z: 0, w: 14, d: 28, h: [14, 36], house: false },
+        { x:  8, z: 0, w: 14, d: 28, h: [14, 36], house: false }
+    ]};
+    if (r < 0.52) return { items: [
+        { x: -8, z: 0, w: 7, d: 14, h: [4, 8], house: false },
+        { x:  0, z: 0, w: 7, d: 14, h: [4, 8], house: false },
+        { x:  8, z: 0, w: 7, d: 14, h: [4, 8], house: false }
+    ]};
+    if (r < 0.72) return { items: [
+        { x: -9, z: -9, w: 13, d: 13, h: [5, 9], house: true },
+        { x:  9, z: -9, w: 13, d: 13, h: [5, 9], house: true },
+        { x: -9, z:  9, w: 13, d: 13, h: [5, 9], house: true },
+        { x:  9, z:  9, w: 13, d: 13, h: [5, 9], house: true }
+    ]};
+    if (r < 0.86) return { items: [
+        { x: -10, z: -11, w: 9, d: 9, h: [5, 8], house: true },
+        { x:   0, z: -11, w: 9, d: 9, h: [5, 8], house: true },
+        { x:  10, z: -11, w: 9, d: 9, h: [5, 8], house: true },
+        { x: -10, z:   0, w: 9, d: 9, h: [5, 8], house: true },
+        { x:   0, z:   0, w: 9, d: 9, h: [5, 8], house: true },
+        { x:  10, z:   0, w: 9, d: 9, h: [5, 8], house: true }
+    ]};
+    return { items: [
+        { x: -9, z: -2, w: 15, d: 20, h: [14, 30], house: false },
+        { x:  9, z:  4, w: 12, d: 14, h: [5, 9],  house: true }
+    ]};
+}
+
+function buildParkInto(group, cx, cz) {
+    const base = CURB_H;
+    const grass = new THREE.Mesh(new THREE.BoxGeometry(37, 0.1, 37), grassMat);
+    grass.position.set(cx, base + 0.05, cz); grass.receiveShadow = true; group.add(grass);
+
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(37, 0.14, 5), pathMat);
+    p1.position.set(cx, base + 0.06, cz); p1.receiveShadow = true; group.add(p1);
+    const p2 = new THREE.Mesh(new THREE.BoxGeometry(5, 0.14, 37), pathMat);
+    p2.position.set(cx, base + 0.065, cz); p2.receiveShadow = true; group.add(p2);
+
+    const fountain = new THREE.Group();
+    const fBase = new THREE.Mesh(new THREE.CylinderGeometry(3.3, 3.6, 0.9, 28), stoneMat);
+    fBase.position.y = 0.45; fBase.castShadow = true; fountain.add(fBase);
+    const waterMat = new THREE.MeshStandardMaterial({
+        color: 0x3fa9d6, roughness: 0.08, metalness: 0.25, transparent: true, opacity: 0.88
+    });
+    const water = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.0, 0.12, 28), waterMat);
+    water.position.y = 0.9; fountain.add(water);
+    const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.65, 2.4, 14), stoneMat);
+    pillar.position.y = 2.0; fountain.add(pillar);
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 0.35, 0.42, 20), stoneMat);
+    bowl.position.y = 3.2; fountain.add(bowl);
+    fountain.position.set(cx, base + 0.1, cz);
+    group.add(fountain);
+
+    const treePos = [
+        [-14,-14],[14,-14],[-14,14],[14,14],
+        [-15.5,-6],[-15.5,6],[15.5,-6],[15.5,6]
+    ];
+    treePos.forEach(([dx, dz]) => {
+        const g = new THREE.Group();
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.32, 3.2, 6), trunkMat);
+        trunk.position.y = 1.6; trunk.castShadow = true; g.add(trunk);
+        [{r:1.55,x:0,y:3.7,z:0},{r:1.10,x:0.95,y:3.1,z:0.35}].forEach((b, i) => {
+            const m = new THREE.Mesh(new THREE.IcosahedronGeometry(b.r, 0), leafMats[i%3]);
+            m.position.set(b.x, b.y, b.z);
+            m.castShadow = true; g.add(m);
+        });
+        g.scale.setScalar(0.85 + Math.random()*0.4);
+        g.position.set(cx + dx, base + 0.1, cz + dz);
+        group.add(g);
+    });
+}
+
+function buildDealershipInto(group, cx, cz) {
+    const base = CURB_H;
+    const w = 30, d = 14, h = 8;
+    const showroomMat = new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 0.4, metalness: 0.5 });
+    const bldg = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), showroomMat);
+    bldg.position.set(cx, base + h/2, cz - 10);
+    bldg.castShadow = true; bldg.receiveShadow = true;
+    group.add(bldg);
+
+    const glassMat = new THREE.MeshStandardMaterial({
+        color: 0x8ec6ff, roughness: 0.05, metalness: 0.9,
+        emissive: 0x4a90d0, emissiveIntensity: 0.9, transparent: true, opacity: 0.85
+    });
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(w-2, h-2, 0.3), glassMat);
+    glass.position.set(cx, base + h/2, cz - 10 + d/2 + 0.05);
+    group.add(glass);
+
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(w+1, 0.4, d+1),
+        new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.4, metalness: 0.4 }));
+    roof.position.set(cx, base + h + 0.2, cz - 10);
+    roof.castShadow = true; group.add(roof);
+
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(20, 1.5, 0.3),
+        new THREE.MeshStandardMaterial({ color: 0xffcc00, emissive: 0xffcc00, emissiveIntensity: 1.6 }));
+    sign.position.set(cx, base + h + 1.2, cz - 10 + d/2 + 0.1);
+    group.add(sign);
+}
+
+function buildHomeInto(group, cx, cz, colliders) {
+    const base = CURB_H;
+    const yard = new THREE.Mesh(new THREE.BoxGeometry(34, 0.1, 12), grassMat);
+    yard.position.set(cx, base + 0.06, cz + 12);
+    yard.receiveShadow = true;
+    group.add(yard);
+    const walkway = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.14, 12), pathMat);
+    walkway.position.set(cx, base + 0.08, cz + 12);
+    walkway.receiveShadow = true;
+    group.add(walkway);
+
+    const houseW = 14, houseH = 6, houseD = 12;
+    const houseMat = new THREE.MeshStandardMaterial({ color: 0xe8d8b0, roughness: 0.85 });
+    const house = new THREE.Mesh(getBoxGeo(houseW, houseH, houseD), houseMat);
+    house.position.set(cx, base + houseH/2, cz - 4);
+    house.castShadow = true; house.receiveShadow = true;
+    group.add(house);
+    colliders.push({
+        minX: cx - houseW/2, maxX: cx + houseW/2,
+        minZ: cz - 4 - houseD/2, maxZ: cz - 4 + houseD/2
+    });
+
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(10.5, 3.6, 4),
+        new THREE.MeshStandardMaterial({ color: 0x8b3a2a, roughness: 0.9, flatShading: true }));
+    roof.position.set(cx, base + houseH + 1.8, cz - 4);
+    roof.rotation.y = Math.PI / 4;
+    roof.castShadow = true; group.add(roof);
+
+    const windowMat = new THREE.MeshStandardMaterial({ color: 0xffd38c, emissive: 0xffcc66, emissiveIntensity: 1.4 });
+    [[-4, 3.2], [4, 3.2]].forEach(([dx, y]) => {
+        const w = new THREE.Mesh(new THREE.BoxGeometry(2, 1.6, 0.15), windowMat);
+        w.position.set(cx + dx, base + y, cz - 4 + houseD/2 + 0.08);
+        group.add(w);
+    });
+
+    const door = new THREE.Mesh(new THREE.BoxGeometry(2, 3.4, 0.22),
+        new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.7 }));
+    door.position.set(cx, base + 1.7, cz - 4 + houseD/2 + 0.1);
+    group.add(door);
+
+    const marker = new THREE.Mesh(
+        new THREE.CircleGeometry(1.9, 28),
+        new THREE.MeshBasicMaterial({ color: 0x3cdc78, transparent: true, opacity: 0.55, depthWrite: false })
+    );
+    marker.rotation.x = -Math.PI / 2;
+    marker.position.set(cx, base + 0.16, cz + 4);
+    group.add(marker);
+}
+
+function genBlock(i, j) {
+    const key = `${i},${j}`;
+    if (generatedBlocks.has(key)) return;
+
+    const group = new THREE.Group();
+    const cx = (i + 0.5) * CELL;
+    const cz = (j + 0.5) * CELL;
+
+    const sw = new THREE.Mesh(SIDEWALK_GEO, sidewalkMat);
+    sw.position.set(cx, CURB_H/2, cz);
+    sw.receiveShadow = true;
+    group.add(sw);
+
+    const colliders = [];
+
+    if (i === PARK_BLOCK.i && j === PARK_BLOCK.j) buildParkInto(group, cx, cz);
+    else if (i === DEALER_BLOCK.i && j === DEALER_BLOCK.j) buildDealershipInto(group, cx, cz);
+    else if (i === HOME_BLOCK.i && j === HOME_BLOCK.j) buildHomeInto(group, cx, cz, colliders);
+    else {
+        const layout = pickLayout();
+        layout.items.forEach(b => {
+            const h = b.h[0] + Math.random() * (b.h[1] - b.h[0]);
+            addBuilding(group, cx + b.x, cz + b.z, b.w, h, b.d, b.house, colliders);
+        });
+    }
+
+    scene.add(group);
+    generatedBlocks.set(key, { group, colliders, i, j });
+}
+
+function genStreetLight() {
+    const g = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.18, 7.2, 8), metalMat);
+    pole.position.y = 3.6; pole.castShadow = true; g.add(pole);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.14, 0.14), metalMat);
+    arm.position.set(1.2, 7.05, 0); g.add(arm);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.22, 0.55), lampHeadMat);
+    head.position.set(2.35, 6.9, 0); g.add(head);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), lampBulbMat);
+    bulb.position.set(2.35, 6.75, 0); g.add(bulb);
+    return g;
+}
+
+function genStreetLightsForBlock(i, j) {
+    const key = `sl_${i}_${j}`;
+    if (streetLights.has(key)) return;
+    const group = new THREE.Group();
+    const cx = (i + 0.5) * CELL;
+    const cz = (j + 0.5) * CELL;
+    const off = 20;
+    [[-1,-1,0], [1,1,Math.PI]].forEach(([dx, dz, rot]) => {
+        const sl = genStreetLight();
+        sl.position.set(cx + dx*off, CURB_H, cz + dz*off);
+        sl.rotation.y = rot;
+        group.add(sl);
+    });
+    scene.add(group);
+    streetLights.set(key, { group, i, j });
+}
+
+function updateCityAround(px, pz) {
+    const pi = Math.round(px / CELL - 0.5);
+    const pj = Math.round(pz / CELL - 0.5);
+
+    for (let i = pi - RENDER_R; i <= pi + RENDER_R; i++)
+        for (let j = pj - RENDER_R; j <= pj + RENDER_R; j++) {
+            genBlock(i, j);
+            genStreetLightsForBlock(i, j);
+        }
+
+    for (let i = pi - RENDER_R; i <= pi + RENDER_R; i++) {
+        for (let j = pj - RENDER_R; j <= pj + RENDER_R; j++) {
+            genIntersection(i, j); genRoadH(i, j); genRoadV(i, j);
+        }
+        genIntersection(i, pj + RENDER_R + 1);
+        genRoadH(i, pj + RENDER_R + 1);
+        genRoadV(i, pj + RENDER_R + 1);
+    }
+    for (let j = pj - RENDER_R; j <= pj + RENDER_R + 1; j++) {
+        genIntersection(pi + RENDER_R + 1, j);
+        genRoadH(pi + RENDER_R + 1, j);
+        genRoadV(pi + RENDER_R + 1, j);
+    }
+
+    const removeKeys = [];
+    generatedBlocks.forEach((b, k) => {
+        if (Math.abs(b.i - pi) > RENDER_R + 1 || Math.abs(b.j - pj) > RENDER_R + 1) {
+            scene.remove(b.group); removeKeys.push(k);
+        }
+    });
+    removeKeys.forEach(k => generatedBlocks.delete(k));
+
+    const removeRoads = [];
+    generatedRoads.forEach((r, k) => {
+        const parts = k.split('_');
+        const ri = parseInt(parts[1], 10);
+        const rj = parseInt(parts[2], 10);
+        if (Math.abs(ri - pi) > RENDER_R + 2 || Math.abs(rj - pj) > RENDER_R + 2) {
+            scene.remove(r.mesh); r.mesh.geometry.dispose(); removeRoads.push(k);
+        }
+    });
+    removeRoads.forEach(k => generatedRoads.delete(k));
+
+    const removeX = [];
+    generatedIntersections.forEach((r, k) => {
+        const parts = k.split('_');
+        const ri = parseInt(parts[1], 10);
+        const rj = parseInt(parts[2], 10);
+        if (Math.abs(ri - pi) > RENDER_R + 2 || Math.abs(rj - pj) > RENDER_R + 2) {
+            scene.remove(r.mesh); r.mesh.geometry.dispose(); removeX.push(k);
+        }
+    });
+    removeX.forEach(k => generatedIntersections.delete(k));
+
+    const removeLights = [];
+    streetLights.forEach((sl, k) => {
+        if (Math.abs(sl.i - pi) > RENDER_R + 1 || Math.abs(sl.j - pj) > RENDER_R + 1) {
+            scene.remove(sl.group); removeLights.push(k);
+        }
+    });
+    removeLights.forEach(k => streetLights.delete(k));
+}
+
+/* ============================================================
+   الشخصية
+   ============================================================ */
+const skinMat  = new THREE.MeshStandardMaterial({ color: 0xd8a87c, roughness: 0.85 });
+const shoeMat  = new THREE.MeshStandardMaterial({ color: 0x111114, roughness: 0.9 });
+const playerShirtMat = new THREE.MeshStandardMaterial({ color: 0x1f6fd0, roughness: 0.75 });
+const playerPantsMat = new THREE.MeshStandardMaterial({ color: 0x23252b, roughness: 0.95 });
+
+function buildCharacterMesh(shirtMaterial, pantsMaterial) {
+    const g = new THREE.Group();
+
+    const t = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.82, 0.40), shirtMaterial);
+    t.position.y = 1.28; t.castShadow = true; g.add(t);
+    const h = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.32, 0.38), pantsMaterial);
+    h.position.y = 0.83; h.castShadow = true; g.add(h);
+    const n = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.14, 8), skinMat);
+    n.position.y = 1.74; g.add(n);
+    const hd = new THREE.Mesh(new THREE.SphereGeometry(0.23, 16, 12), skinMat);
+    hd.position.y = 1.95; hd.castShadow = true; g.add(hd);
+    const hr = new THREE.Mesh(
+        new THREE.SphereGeometry(0.24, 16, 12, 0, Math.PI*2, 0, Math.PI*0.62),
+        new THREE.MeshStandardMaterial({ color: 0x221812, roughness: 1.0 }));
+    hr.position.y = 1.97; g.add(hr);
+
+    function mkArm(side) {
+        const pivot = new THREE.Group();
+        pivot.position.set(side * 0.47, 1.62, 0);
+        const upper = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.64, 0.18), shirtMaterial);
+        upper.position.y = -0.32; upper.castShadow = true; pivot.add(upper);
+        const hand = new THREE.Mesh(new THREE.SphereGeometry(0.10, 10, 8), skinMat);
+        hand.position.y = -0.70; hand.castShadow = true; pivot.add(hand);
+        return pivot;
+    }
+    function mkLeg(side) {
+        const pivot = new THREE.Group();
+        pivot.position.set(side * 0.18, 0.84, 0);
+        const upper = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.76, 0.25), pantsMaterial);
+        upper.position.y = -0.38; upper.castShadow = true; pivot.add(upper);
+        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.13, 0.42), shoeMat);
+        foot.position.set(0, -0.79, 0.08); foot.castShadow = true; pivot.add(foot);
+        return pivot;
+    }
+    const aL = mkArm(-1), aR = mkArm(1);
+    const lL = mkLeg(-1), lR = mkLeg(1);
+    g.add(aL, aR, lL, lR);
+
+    g.userData = {
+        shirtMat: shirtMaterial,
+        pantsMat: pantsMaterial,
+        armL: aL, armR: aR, legL: lL, legR: lR
+    };
+    return g;
+}
+
+const player = buildCharacterMesh(playerShirtMat, playerPantsMat);
+player.position.set(16, CURB_H, 42);
+scene.add(player);
+
+const armL = player.userData.armL;
+const armR = player.userData.armR;
+const legL = player.userData.legL;
+const legR = player.userData.legR;
+
+/* ============================================================
+   عربية اللاعب
+   ============================================================ */
+function createCarModel(color = 0xd4af37) {
+    const g = new THREE.Group();
+    const bodyMat  = new THREE.MeshStandardMaterial({ color, roughness: 0.25, metalness: 0.75 });
+    const glassMat = new THREE.MeshStandardMaterial({
+        color: 0x0a1018, roughness: 0.05, metalness: 0.95, transparent: true, opacity: 0.85
+    });
+    const tyreMat  = new THREE.MeshStandardMaterial({ color: 0x0d0d0d, roughness: 0.95 });
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff0c0, emissiveIntensity: 1.5 });
+    const tailMat = new THREE.MeshStandardMaterial({ color: 0xff2020, emissive: 0xff2020, emissiveIntensity: 1.2 });
+
+    const lower = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 4.3), bodyMat);
+    lower.position.y = 0.65; lower.castShadow = true; g.add(lower);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.62, 2.4), bodyMat);
+    cabin.position.set(0, 1.22, -0.15); cabin.castShadow = true; g.add(cabin);
+
+    const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.55, 0.08), glassMat);
+    windshield.position.set(0, 1.22, 1.05); windshield.rotation.x = -0.25; g.add(windshield);
+    const rearGlass = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.5, 0.08), glassMat);
+    rearGlass.position.set(0, 1.22, -1.32); rearGlass.rotation.x = 0.3; g.add(rearGlass);
+
+    const wheelGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.32, 14);
+    [[-0.85,1.32],[0.85,1.32],[-0.85,-1.32],[0.85,-1.32]].forEach(([x, z]) => {
+        const w = new THREE.Mesh(wheelGeo, tyreMat);
+        w.rotation.z = Math.PI/2;
+        w.position.set(x, 0.42, z);
+        w.castShadow = true; g.add(w);
+    });
+
+    [-0.55, 0.55].forEach(x => {
+        const l = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.12), lightMat);
+        l.position.set(x, 0.78, 2.18); g.add(l);
+    });
+    [-0.6, 0.6].forEach(x => {
+        const l = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.18, 0.1), tailMat);
+        l.position.set(x, 0.78, -2.18); g.add(l);
+    });
+
+    return g;
+}
+
+const playerCar = createCarModel(0xd4af37);
+playerCar.position.set(28, CURB_H + 0.02, 31);
+playerCar.rotation.y = Math.PI;
+scene.add(playerCar);
+const carState = { heading: Math.PI, speed: 0, maxSpeed: 42, reverseSpeed: 14, accel: 22, turnRate: 1.9 };
+
+/* ============================================================
+   سيارات المرور
+   ============================================================ */
+const aiCars = [];
+const carColors = [0xc0392b, 0x2980b9, 0xf1c40f, 0xecf0f1, 0x2c3e50, 0x27ae60, 0x8e44ad, 0xe67e22];
+
+function createAICar(color) {
+    const g = new THREE.Group();
+    const bodyMat  = new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.45 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x0d1016, roughness: 0.1, metalness: 0.8 });
+    const tyreMat  = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.95 });
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.8, 4.0), bodyMat);
+    body.position.y = 0.7; g.add(body);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.65, 2.1), glassMat);
+    cabin.position.set(0, 1.4, -0.15); g.add(cabin);
+
+    const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.28, 8);
+    [[-0.82,1.25],[0.82,1.25],[-0.82,-1.25],[0.82,-1.25]].forEach(([x, z]) => {
+        const w = new THREE.Mesh(wheelGeo, tyreMat);
+        w.rotation.z = Math.PI/2;
+        w.position.set(x, 0.38, z); g.add(w);
+    });
+    return g;
+}
+
+function assignCarPath(car) {
+    const pi = Math.round(player.position.x / CELL);
+    const pj = Math.round(player.position.z / CELL);
+    const useHorizontal = Math.random() < 0.5;
+    const dir = Math.random() < 0.5 ? 1 : -1;
+
+    if (useHorizontal) {
+        const jOff = Math.floor(Math.random() * (RENDER_R*2+3)) - RENDER_R - 1;
+        const lineZ = (pj + jOff) * CELL + (dir > 0 ? 4 : -4);
+        const xStart = (pi - RENDER_R - 2) * CELL;
+        const xEnd = (pi + RENDER_R + 2) * CELL;
+        car.userData = {
+            axis: 'x', dir,
+            pos: dir > 0 ? xStart : xEnd,
+            speed: 14 + Math.random() * 12,
+            minPos: Math.min(xStart, xEnd),
+            maxPos: Math.max(xStart, xEnd)
+        };
+        car.position.set(car.userData.pos, 0.02, lineZ);
+        car.rotation.y = dir > 0 ? Math.PI/2 : -Math.PI/2;
+    } else {
+        const iOff = Math.floor(Math.random() * (RENDER_R*2+3)) - RENDER_R - 1;
+        const lineX = (pi + iOff) * CELL + (dir > 0 ? -4 : 4);
+        const zStart = (pj - RENDER_R - 2) * CELL;
+        const zEnd = (pj + RENDER_R + 2) * CELL;
+        car.userData = {
+            axis: 'z', dir,
+            pos: dir > 0 ? zStart : zEnd,
+            speed: 14 + Math.random() * 12,
+            minPos: Math.min(zStart, zEnd),
+            maxPos: Math.max(zStart, zEnd)
+        };
+        car.position.set(lineX, 0.02, car.userData.pos);
+        car.rotation.y = dir > 0 ? 0 : Math.PI;
+    }
+}
+
+for (let i = 0; i < 18; i++) {
+    const car = createAICar(carColors[Math.floor(Math.random()*carColors.length)]);
+    scene.add(car);
+    assignCarPath(car);
+    aiCars.push(car);
+}
+
+/* ============================================================
+   المشاة
+   ============================================================ */
+const pedestrians = [];
+const pedColors = [0xc0392b, 0x2980b9, 0xf1c40f, 0x27ae60, 0x8e44ad, 0xe67e22, 0xecf0f1, 0x34495e];
+
+function createPedestrian(color) {
+    const g = new THREE.Group();
+    const shirt = new THREE.MeshStandardMaterial({ color, roughness: 0.8 });
+    const pants = new THREE.MeshStandardMaterial({ color: 0x23252b, roughness: 0.95 });
+
+    const t = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.32), shirt);
+    t.position.y = 1.2; t.castShadow = true; g.add(t);
+    const h = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), skinMat);
+    h.position.y = 1.72; h.castShadow = true; g.add(h);
+
+    const lL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), pants);
+    lL.position.set(-0.15, 0.42, 0); g.add(lL);
+    const lR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), pants);
+    lR.position.set(0.15, 0.42, 0); g.add(lR);
+
+    return g;
+}
+
+function assignPedTarget(ped) {
+    const pi = Math.round(player.position.x / CELL - 0.5);
+    const pj = Math.round(player.position.z / CELL - 0.5);
+    const i = pi + Math.floor(Math.random() * (RENDER_R*2+1)) - RENDER_R;
+    const j = pj + Math.floor(Math.random() * (RENDER_R*2+1)) - RENDER_R;
+    const cx = (i + 0.5) * CELL;
+    const cz = (j + 0.5) * CELL;
+    const R = 20;
+    const corners = [
+        new THREE.Vector3(cx - R, CURB_H, cz - R),
+        new THREE.Vector3(cx + R, CURB_H, cz - R),
+        new THREE.Vector3(cx + R, CURB_H, cz + R),
+        new THREE.Vector3(cx - R, CURB_H, cz + R)
+    ];
+    const side = Math.floor(Math.random() * 4);
+    const a = corners[side];
+    const b = corners[(side + 1) % 4];
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    const start = dir > 0 ? a.clone() : b.clone();
+    const end = dir > 0 ? b.clone() : a.clone();
+    ped.userData = {
+        start, end, t: 0,
+        speed: (1.6 + Math.random()*1.4) / start.distanceTo(end),
+        phase: Math.random() * Math.PI * 2
+    };
+    ped.position.copy(start);
+}
+
+for (let i = 0; i < 40; i++) {
+    const ped = createPedestrian(pedColors[Math.floor(Math.random()*pedColors.length)]);
+    scene.add(ped);
+    assignPedTarget(ped);
+    ped.userData.t = Math.random();
+    pedestrians.push(ped);
+}
+
+/* ============================================================
+   نظام اليوم/الليل
+   ============================================================ */
+const DAY_DURATION = 180;
+let timeOfDay = 0.30;
+const clockEl = document.getElementById('clock');
+
+const C_NIGHT_TOP = new THREE.Color(0x05080f);
+const C_NIGHT_MID = new THREE.Color(0x0a1220);
+const C_NIGHT_BOT = new THREE.Color(0x141c28);
+const C_DAWN_TOP  = new THREE.Color(0x2a3a6a);
+const C_DAWN_MID  = new THREE.Color(0xd07050);
+const C_DAWN_BOT  = new THREE.Color(0xf0a870);
+const C_DAY_TOP   = new THREE.Color(0x1a5aa8);
+const C_DAY_MID   = new THREE.Color(0x5f9fd4);
+const C_DAY_BOT   = new THREE.Color(0xdfe9f2);
+
+const tmpTop = new THREE.Color(), tmpMid = new THREE.Color(), tmpBot = new THREE.Color();
+
+function updateDayNight(dt, focusX, focusZ) {
+    timeOfDay = (timeOfDay + dt / DAY_DURATION) % 1.0;
+    const sunAngle = (timeOfDay - 0.25) * Math.PI * 2;
+    const sunY = Math.sin(sunAngle);
+    const sunX = Math.cos(sunAngle);
+
+    sun.position.set(focusX + sunX * 180, Math.max(15, sunY * 200), focusZ + 40);
+    sun.target.position.set(focusX, 0, focusZ);
+    sun.target.updateMatrixWorld();
+
+    const dayFactor = Math.max(0, Math.min(1, sunY * 1.6 + 0.15));
+    sun.intensity = 0.08 + dayFactor * 2.6;
+    hemi.intensity = 0.12 + dayFactor * 1.05;
+    ambient.intensity = 0.08 + dayFactor * 0.32;
+
+    if (sunY < -0.12) { tmpTop.copy(C_NIGHT_TOP); tmpMid.copy(C_NIGHT_MID); tmpBot.copy(C_NIGHT_BOT); }
+    else if (sunY < 0.18) {
+        const k = (sunY + 0.12) / 0.30;
+        tmpTop.copy(C_NIGHT_TOP).lerp(C_DAWN_TOP, k);
+        tmpMid.copy(C_NIGHT_MID).lerp(C_DAWN_MID, k);
+        tmpBot.copy(C_NIGHT_BOT).lerp(C_DAWN_BOT, k);
+    } else if (sunY < 0.45) {
+        const k = (sunY - 0.18) / 0.27;
+        tmpTop.copy(C_DAWN_TOP).lerp(C_DAY_TOP, k);
+        tmpMid.copy(C_DAWN_MID).lerp(C_DAY_MID, k);
+        tmpBot.copy(C_DAWN_BOT).lerp(C_DAY_BOT, k);
+    } else { tmpTop.copy(C_DAY_TOP); tmpMid.copy(C_DAY_MID); tmpBot.copy(C_DAY_BOT); }
+
+    skyUniforms.uTop.value.copy(tmpTop);
+    skyUniforms.uMid.value.copy(tmpMid);
+    skyUniforms.uBot.value.copy(tmpBot);
+    scene.fog.color.copy(tmpMid);
+
+    const lampPower = Math.max(0, 1 - dayFactor * 2.6);
+    lampHeadMat.emissiveIntensity = 0.15 + lampPower * 1.8;
+    lampBulbMat.emissiveIntensity = 0.15 + lampPower * 2.2;
+    const glow = 0.35 + (1 - dayFactor) * 1.4;
+    facadeMats.forEach(m => m.emissiveIntensity = glow);
+    houseMats.forEach(m => m.emissiveIntensity = glow);
+
+    const hours = Math.floor(((timeOfDay * 24) + 6) % 24);
+    const minutes = Math.floor((((timeOfDay * 24) + 6) % 1) * 60);
+    clockEl.innerHTML = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')} <span class="sun">${sunY > 0 ? '☀' : '🌙'}</span>`;
+}
+
+/* ============================================================
+   نظام الملابس
+   ============================================================ */
+const OUTFITS = [
+    { name: 'الأزرق',    shirt: 0x1f6fd0, pants: 0x23252b },
+    { name: 'الأحمر',    shirt: 0xc0392b, pants: 0x1a1a1a },
+    { name: 'الأخضر',    shirt: 0x27ae60, pants: 0x2c3e50 },
+    { name: 'الأبيض',    shirt: 0xecf0f1, pants: 0x34495e },
+    { name: 'الأسود',    shirt: 0x2c3e50, pants: 0x111111 },
+    { name: 'البرتقالي', shirt: 0xe67e22, pants: 0x23252b },
+    { name: 'البنفسجي',  shirt: 0x8e44ad, pants: 0x1a1a1a },
+    { name: 'الأصفر',    shirt: 0xf1c40f, pants: 0x2c3e50 }
+];
+
+let currentOutfit = 0;
+const wardrobeEl = document.getElementById('wardrobe');
+const outfitsEl = document.getElementById('outfits');
+let wardrobeOpen = false;
+
+function hex(c) { return '#' + c.toString(16).padStart(6, '0'); }
+
+OUTFITS.forEach((o, idx) => {
+    const card = document.createElement('div');
+    card.className = 'outfit' + (idx === 0 ? ' active' : '');
+    card.dataset.index = idx;
+    card.innerHTML = `
+        <div class="swatches">
+            <div class="swatch" style="background:${hex(o.shirt)}"></div>
+            <div class="swatch" style="background:${hex(o.pants)}"></div>
+        </div>
+        <div class="label">${o.name}</div>
+    `;
+    card.addEventListener('click', () => applyOutfit(idx));
+    outfitsEl.appendChild(card);
+});
+
+function applyOutfit(idx) {
+    currentOutfit = idx;
+    const o = OUTFITS[idx];
+    playerShirtMat.color.setHex(o.shirt);
+    playerPantsMat.color.setHex(o.pants);
+    document.querySelectorAll('.outfit').forEach((el, k) => {
+        el.classList.toggle('active', k === idx);
+    });
+    if (mp.roomCode) broadcastState();
+}
+function openWardrobe() { wardrobeOpen = true; wardrobeEl.classList.add('show'); }
+function closeWardrobe() { wardrobeOpen = false; wardrobeEl.classList.remove('show'); }
+
+document.getElementById('wardrobe-close').addEventListener('click', closeWardrobe);
+wardrobeEl.addEventListener('click', (e) => { if (e.target === wardrobeEl) closeWardrobe(); });
+
+/* ============================================================
+   الأونلاين — تحميل آمن مع timeout + اللعبة تعمل بدون سيرفر
+   ============================================================ */
+const mp = {
+    connected: false,
+    isHost: false,
+    roomCode: '',
+    myId: null,
+    remotePlayers: new Map(),
+    lastSyncTime: 0,
+    syncInterval: 0.05
+};
+const remoteCars = new Map();
+
+let socket = null;
+let socketLoaded = false;
+
+const mpPanel       = document.getElementById('mp-panel');
+const mpStatus      = document.getElementById('mp-status');
+const mpForm        = document.getElementById('mp-form');
+const mpRoomInfo    = document.getElementById('mp-room-info');
+const mpCodeDisplay = document.getElementById('mp-code-display');
+const mpCodeInput   = document.getElementById('mp-code-input');
+const mpPlayersList = document.getElementById('mp-players-list');
+const btnOnline     = document.getElementById('btn-online');
+const netStatus     = document.getElementById('net-status');
+const netStatusText = document.getElementById('net-status-text');
+
+let mpPanelOpen = false;
+
+function setMpStatus(text, cls) { mpStatus.textContent = text; mpStatus.className = cls || ''; }
+function openMpPanel()  { mpPanelOpen = true;  mpPanel.classList.add('show'); }
+function closeMpPanel() { mpPanelOpen = false; mpPanel.classList.remove('show'); }
+
+function updateRoomUI() {
+    const inRoom = !!mp.roomCode;
+    mpForm.style.display     = inRoom ? 'none' : '';
+    mpRoomInfo.style.display = inRoom ? '' : 'none';
+    mpCodeDisplay.textContent = mp.roomCode || '------';
+    btnOnline.classList.toggle('connected', inRoom);
+}
+function updatePlayersList() {
+    const n = mp.remotePlayers.size;
+    if (n === 0) {
+        mpPlayersList.innerHTML = mp.isHost
+            ? 'لا يوجد لاعبون آخرون بعد — شارك الكود!'
+            : 'لا يوجد لاعبون آخرون بعد';
+    } else {
+        const names = [...mp.remotePlayers.keys()].map(id => 'لاعب ' + id.substring(id.length - 4));
+        mpPlayersList.innerHTML = `<b>${n}</b> لاعب متصل:<br>${names.join('<br>')}`;
+    }
+}
+function showNetStatus(show, text, offline) {
+    netStatus.classList.toggle('show', !!show);
+    netStatusText.textContent = text || '';
+    const dot = netStatus.querySelector('.dot');
+    dot.classList.toggle('off', !!offline);
+}
+
+/* --- تحميل socket.io بأمان --- */
+function loadSocketIO() {
+    return new Promise((resolve, reject) => {
+        if (window.io) { resolve(); return; }
+        const script = document.createElement('script');
+        script.src = SERVER_URL.replace(/\/$/, '') + '/socket.io/socket.io.js';
+        script.async = true;
+        const to = setTimeout(() => {
+            script.remove();
+            reject(new Error('TIMEOUT'));
+        }, 6000);
+        script.onload = () => { clearTimeout(to); resolve(); };
+        script.onerror = () => { clearTimeout(to); reject(new Error('LOAD_FAILED')); };
+        document.head.appendChild(script);
+    });
+}
+
+/* --- تهيئة Socket --- */
+function initSocket() {
+    try {
+        socket = window.io(SERVER_URL, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1500,
+            timeout: 15000,
+            withCredentials: false
+        });
+
+        socket.on('connect', () => {
+            console.log('[SOCKET] Connected:', socket.id);
+            socketLoaded = true;
+            mp.connected = true;
+            setMpStatus('متصل بالسيرفر ✔', 'connected');
+            showNetStatus(!!mp.roomCode, mp.roomCode ? ('في غرفة ' + mp.roomCode) : 'متصل', false);
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.log('[SOCKET] Disconnected:', reason);
+            mp.connected = false;
+            setMpStatus('انقطع الاتصال', 'error');
+            showNetStatus(true, 'انقطع الاتصال', true);
+        });
+
+        socket.on('connect_error', (err) => {
+            console.log('[SOCKET] Error:', err.message);
+            mp.connected = false;
+            setMpStatus('تعذّر الوصول للسيرفر', 'error');
+        });
+
+        socket.on('roomCreated', (data) => {
+            if (!data.ok) return;
+            mp.roomCode = data.code;
+            mp.isHost = true;
+            setMpStatus('الغرفة جاهزة — شارك الكود', 'host');
+            updateRoomUI();
+            updatePlayersList();
+            showNetStatus(true, 'المضيف — ' + data.code, false);
+        });
+
+        socket.on('roomJoined', (data) => {
+            if (!data.ok) return;
+            mp.roomCode = data.code;
+            mp.isHost = false;
+            setMpStatus('انضممت للغرفة ✔', 'connected');
+            (data.players || []).forEach(p => createRemotePlayer(p.id, p.shirt, p.pants));
+            updateRoomUI();
+            updatePlayersList();
+            showNetStatus(true, 'في غرفة ' + data.code, false);
+            broadcastState();
+        });
+
+        socket.on('joinError', (data) => {
+            const msg = data.error === 'ROOM_NOT_FOUND' ? 'الغرفة غير موجودة'
+                      : data.error === 'ROOM_FULL'      ? 'الغرفة ممتلئة'
+                      : 'فشل الانضمام';
+            setMpStatus(msg, 'error');
+        });
+
+        socket.on('playerJoined', (p) => {
+            createRemotePlayer(p.id, p.shirt, p.pants);
+            updatePlayersList();
+        });
+
+        socket.on('playerLeft', ({ id }) => {
+            const rp = mp.remotePlayers.get(id);
+            if (rp) { scene.remove(rp.group); mp.remotePlayers.delete(id); }
+            const rc = remoteCars.get(id);
+            if (rc) { scene.remove(rc); remoteCars.delete(id); }
+            updatePlayersList();
+        });
+
+        socket.on('playerState', (p) => {
+            let rp = mp.remotePlayers.get(p.id);
+            if (!rp) rp = createRemotePlayer(p.id, p.shirt, p.pants);
+
+            if (p.shirt !== undefined) rp.group.userData.shirtMat.color.setHex(p.shirt);
+            if (p.pants !== undefined) rp.group.userData.pantsMat.color.setHex(p.pants);
+
+            rp.targetPos.set(p.x, p.y, p.z);
+            rp.targetRot = p.rot;
+            rp.inCar = p.inCar;
+
+            if (p.inCar) {
+                let car = remoteCars.get(p.id);
+                if (!car) {
+                    car = createCarModel(0xc0392b);
+                    scene.add(car);
+                    remoteCars.set(p.id, car);
+                }
+                car.visible = true;
+                car.position.set(p.cx, p.cy + 0.02, p.cz);
+                car.rotation.y = p.crot;
+                rp.group.visible = false;
+            } else {
+                rp.group.visible = true;
+                const car = remoteCars.get(p.id);
+                if (car) car.visible = false;
+            }
+        });
+
+    } catch (e) {
+        console.warn('[SOCKET] Init failed:', e);
+        setMpStatus('تعذّر تشغيل الاتصال', 'error');
+    }
+}
+
+/* --- تهيئة غير متزامنة (بدون تعليق اللعبة) --- */
+loadSocketIO().then(() => {
+    console.log('[ONLINE] socket.io loaded');
+    initSocket();
+}).catch((err) => {
+    console.warn('[ONLINE] socket.io failed:', err.message);
+    socketLoaded = false;
+    setMpStatus('السيرفر غير متاح — اللعبة تعمل فردياً', 'error');
+    showNetStatus(true, 'وضع فردي', true);
+});
+
+/* --- أحداث الأزرار --- */
+document.querySelectorAll('.mp-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.mp-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const which = tab.dataset.tab;
+        document.getElementById('mp-host-tab').style.display = which === 'host' ? '' : 'none';
+        document.getElementById('mp-join-tab').style.display = which === 'join' ? '' : 'none';
+    });
+});
+
+document.getElementById('mp-create').addEventListener('click', () => {
+    if (!socket || !socket.connected) {
+        setMpStatus('السيرفر غير متاح', 'error');
+        return;
+    }
+    setMpStatus('جارٍ إنشاء الغرفة...', '');
+    socket.emit('createRoom', {
+        playerInfo: {
+            shirt: OUTFITS[currentOutfit].shirt,
+            pants: OUTFITS[currentOutfit].pants
+        }
+    });
+});
+
+document.getElementById('mp-join').addEventListener('click', () => {
+    if (!socket || !socket.connected) {
+        setMpStatus('السيرفر غير متاح', 'error');
+        return;
+    }
+    const code = mpCodeInput.value.trim().toUpperCase();
+    if (!/^[A-Z0-9]{6}$/.test(code)) {
+        setMpStatus('الكود غير صحيح', 'error');
+        return;
+    }
+    setMpStatus('جارٍ الاتصال...', '');
+    socket.emit('joinRoom', {
+        code,
+        playerInfo: {
+            shirt: OUTFITS[currentOutfit].shirt,
+            pants: OUTFITS[currentOutfit].pants
+        }
+    });
+});
+
+document.getElementById('mp-disconnect').addEventListener('click', () => {
+    if (socket && socket.connected) socket.emit('leaveRoom');
+    mp.remotePlayers.forEach(rp => scene.remove(rp.group));
+    mp.remotePlayers.clear();
+    remoteCars.forEach(c => scene.remove(c));
+    remoteCars.clear();
+    mp.roomCode = '';
+    mp.isHost = false;
+    setMpStatus('غير متصل', '');
+    updateRoomUI();
+    updatePlayersList();
+    showNetStatus(false);
+});
+
+btnOnline.addEventListener('click', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    openMpPanel();
+});
+document.getElementById('mp-close').addEventListener('click', closeMpPanel);
+mpPanel.addEventListener('click', (e) => { if (e.target === mpPanel) closeMpPanel(); });
+btnOnline.addEventListener('contextmenu', e => e.preventDefault());
+
+document.getElementById('mp-copy').addEventListener('click', async () => {
+    const btn = document.getElementById('mp-copy');
+    try {
+        await navigator.clipboard.writeText(mp.roomCode);
+        btn.textContent = '✔ تم';
+        setTimeout(() => { btn.textContent = '📋 نسخ'; }, 1500);
+    } catch {
+        btn.textContent = '⚠️';
+        setTimeout(() => { btn.textContent = '📋 نسخ'; }, 1500);
+    }
+});
+
+mpCodeInput.addEventListener('input', () => {
+    mpCodeInput.value = mpCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+});
+mpCodeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('mp-join').click(); }
+});
+
+function broadcastState() {
+    if (!socket || !socket.connected || !mp.roomCode) return;
+    socket.emit('playerState', {
+        x: player.position.x,
+        y: player.position.y,
+        z: player.position.z,
+        rot: player.rotation.y,
+        inCar: inCar,
+        cx: playerCar.position.x,
+        cy: playerCar.position.y,
+        cz: playerCar.position.z,
+        crot: playerCar.rotation.y,
+        shirt: OUTFITS[currentOutfit].shirt,
+        pants: OUTFITS[currentOutfit].pants
+    });
+}
+
+function createRemotePlayer(pid, shirtColor, pantsColor) {
+    const sM = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.75 });
+    const pM = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.95 });
+    const group = buildCharacterMesh(sM, pM);
+    group.position.set(0, CURB_H, 0);
+    scene.add(group);
+    const rp = {
+        group,
+        targetPos: new THREE.Vector3(),
+        currentPos: new THREE.Vector3(),
+        targetRot: 0,
+        currentRot: 0,
+        inCar: false
+    };
+    mp.remotePlayers.set(pid, rp);
+    return rp;
+}
+
+updateRoomUI();
+updatePlayersList();
+
+/* ============================================================
+   التحكم
+   ============================================================ */
+const keys = { forward: false, backward: false, left: false, right: false, run: false };
+let yaw = 0, pitch = -0.06;
+const PITCH_MIN = -0.85, PITCH_MAX = 0.85;
+
+document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+
+    if (mpPanelOpen) {
+        if (e.code === 'Escape') closeMpPanel();
+        return;
+    }
+    if (wardrobeOpen) {
+        if (e.code === 'Escape' || e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyE') {
+            closeWardrobe(); e.preventDefault();
+        }
+        return;
+    }
+    switch (e.code) {
+        case 'KeyW': case 'ArrowUp':    keys.forward  = true; break;
+        case 'KeyS': case 'ArrowDown':  keys.backward = true; break;
+        case 'KeyA': case 'ArrowLeft':  keys.left     = true; break;
+        case 'KeyD': case 'ArrowRight': keys.right    = true; break;
+        case 'ShiftLeft': case 'ShiftRight': keys.run = true; break;
+        case 'Space': e.preventDefault(); onEnterPressed(); break;
+        case 'KeyE': onEnterPressed(); break;
+    }
+});
+document.addEventListener('keyup', (e) => {
+    switch (e.code) {
+        case 'KeyW': case 'ArrowUp':    keys.forward  = false; break;
+        case 'KeyS': case 'ArrowDown':  keys.backward = false; break;
+        case 'KeyA': case 'ArrowLeft':  keys.left     = false; break;
+        case 'KeyD': case 'ArrowRight': keys.right    = false; break;
+        case 'ShiftLeft': case 'ShiftRight': keys.run = false; break;
+    }
+});
+
+const joyEl = document.getElementById('joystick');
+const stickEl = document.getElementById('stick');
+const joyInput = { x: 0, y: 0 };
+let joyPointerId = null;
+
+function joyMaxRadius() {
+    const r = joyEl.getBoundingClientRect();
+    return Math.max(20, r.width/2 - 12);
+}
+function joyUpdate(clientX, clientY) {
+    const r = joyEl.getBoundingClientRect();
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    let dx = clientX - cx, dy = clientY - cy;
+    const max = joyMaxRadius();
+    const dist = Math.hypot(dx, dy);
+    if (dist > max) { dx = (dx/dist)*max; dy = (dy/dist)*max; }
+    stickEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    joyInput.x = dx / max;
+    joyInput.y = dy / max;
+}
+function joyReset() {
+    joyPointerId = null;
+    joyInput.x = 0; joyInput.y = 0;
+    stickEl.style.transform = 'translate(-50%, -50%)';
+}
+joyEl.addEventListener('pointerdown', (e) => {
+    if (wardrobeOpen || mpPanelOpen) return;
+    if (joyPointerId !== null) return;
+    joyPointerId = e.pointerId;
+    joyEl.setPointerCapture(e.pointerId);
+    joyUpdate(e.clientX, e.clientY);
+    e.preventDefault();
+});
+joyEl.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== joyPointerId) return;
+    joyUpdate(e.clientX, e.clientY);
+    e.preventDefault();
+});
+joyEl.addEventListener('pointerup', (e) => { if (e.pointerId === joyPointerId) joyReset(); });
+joyEl.addEventListener('pointercancel', (e) => { if (e.pointerId === joyPointerId) joyReset(); });
+joyEl.addEventListener('lostpointercapture', () => { if (joyPointerId !== null) joyReset(); });
+
+const LOOK_SENS = 0.0042;
+let lookPointerId = null, lookX = 0, lookY = 0;
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+    if (wardrobeOpen || mpPanelOpen) return;
+    if (lookPointerId !== null) return;
+    lookPointerId = e.pointerId;
+    lookX = e.clientX; lookY = e.clientY;
+    renderer.domElement.setPointerCapture(e.pointerId);
+});
+renderer.domElement.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== lookPointerId) return;
+    yaw   -= (e.clientX - lookX) * LOOK_SENS;
+    pitch -= (e.clientY - lookY) * LOOK_SENS;
+    pitch = Math.max(PITCH_MIN, Math.min(PITCH_MAX, pitch));
+    lookX = e.clientX; lookY = e.clientY;
+});
+function endLook(e) { if (e.pointerId === lookPointerId) lookPointerId = null; }
+renderer.domElement.addEventListener('pointerup', endLook);
+renderer.domElement.addEventListener('pointercancel', endLook);
+renderer.domElement.addEventListener('lostpointercapture', endLook);
+
+const btnEnter = document.getElementById('btn-enter');
+btnEnter.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    btnEnter.classList.add('pressed');
+    btnEnter.setPointerCapture(e.pointerId);
+    onEnterPressed();
+});
+btnEnter.addEventListener('pointerup', () => btnEnter.classList.remove('pressed'));
+btnEnter.addEventListener('pointercancel', () => btnEnter.classList.remove('pressed'));
+btnEnter.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ============================================================
+   التفاعل
+   ============================================================ */
+let inCar = false;
+const promptEl = document.getElementById('prompt');
+const promptText = document.getElementById('prompt-text');
+
+function distance2D(a, b) {
+    const dx = a.x - b.x, dz = a.z - b.z;
+    return Math.sqrt(dx*dx + dz*dz);
+}
+function nearPlayerCar() { return distance2D(player.position, playerCar.position) < 4; }
+function nearHomeDoor() { return distance2D(player.position, HOME_DOOR_POS) < 3.5; }
+
+function onEnterPressed() {
+    if (wardrobeOpen) { closeWardrobe(); return; }
+    if (mpPanelOpen) { closeMpPanel(); return; }
+    if (inCar) { exitCar(); return; }
+    if (nearHomeDoor()) { openWardrobe(); return; }
+    if (nearPlayerCar()) { enterCar(); return; }
+    if (isGrounded) { yVel = JUMP_V; isGrounded = false; }
+}
+function enterCar() {
+    inCar = true;
+    player.visible = false;
+    carState.heading = playerCar.rotation.y;
+    carState.speed = 0;
+    broadcastState();
+}
+function exitCar() {
+    inCar = false;
+    player.visible = true;
+    const h = carState.heading;
+    const leftX = Math.cos(h), leftZ = -Math.sin(h);
+    const exitX = playerCar.position.x + leftX * 2.2;
+    const exitZ = playerCar.position.z + leftZ * 2.2;
+    const exitY = groundHeightAt(exitX, exitZ);
+    player.position.set(exitX, exitY, exitZ);
+    player.rotation.y = h;
+    yaw = h + Math.PI;
+    broadcastState();
+}
+
+/* ============================================================
+   الفيزياء
+   ============================================================ */
+let yVel = 0, isGrounded = true;
+const GRAVITY = -32;
+const JUMP_V = 11;
+const WALK_SPD = 16;
+const RUN_SPD = 32;
+const PLAYER_R = 0.55;
+const CAR_R = 1.5;
+
+function groundHeightAt(x, z) {
+    const fx = (x - 8) / CELL;
+    const fz = (z - 8) / CELL;
+    const i = Math.floor(fx), j = Math.floor(fz);
+    const lx = x - (i*CELL + 8), lz = z - (j*CELL + 8);
+    if (lx >= 0 && lx < 40 && lz >= 0 && lz < 40) return CURB_H;
+    return 0;
+}
+function hitsBuilding(x, z, radius) {
+    const bi = Math.round(x / CELL - 0.5);
+    const bj = Math.round(z / CELL - 0.5);
+    for (let di = -1; di <= 1; di++) {
+        for (let dj = -1; dj <= 1; dj++) {
+            const blk = generatedBlocks.get(`${bi+di},${bj+dj}`);
+            if (!blk) continue;
+            for (const b of blk.colliders) {
+                if (x > b.minX - radius && x < b.maxX + radius &&
+                    z > b.minZ - radius && z < b.maxZ + radius) return true;
+            }
+        }
+    }
+    return false;
+}
+
+/* ============================================================
+   حلقة الرسم
+   ============================================================ */
+const clock = new THREE.Clock();
+const camTarget = new THREE.Vector3();
+const camOffset = new THREE.Vector3();
+const forwardDir = new THREE.Vector3();
+const rightDir = new THREE.Vector3();
+const moveDir = new THREE.Vector3();
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+
+const CAM_DIST = 6.5;
+const CAM_HEIGHT = 2.6;
+let walkPhase = 0;
+let lastCityI = null, lastCityJ = null;
+
+function animate() {
+    requestAnimationFrame(animate);
+    const delta = Math.min(clock.getDelta(), 0.05);
+
+    const focusX = inCar ? playerCar.position.x : player.position.x;
+    const focusZ = inCar ? playerCar.position.z : player.position.z;
+    const ci = Math.round(focusX / CELL - 0.5);
+    const cj = Math.round(focusZ / CELL - 0.5);
+    if (ci !== lastCityI || cj !== lastCityJ) {
+        updateCityAround(focusX, focusZ);
+        lastCityI = ci; lastCityJ = cj;
+    }
+
+    updateDayNight(delta, focusX, focusZ);
+
+    const uiBlocking = wardrobeOpen || mpPanelOpen;
+
+    if (inCar && !uiBlocking) {
+        let throttle = (keys.forward ? 1 : 0) - (keys.backward ? 1 : 0);
+        let steer = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+        const jy = -joyInput.y, jx = joyInput.x;
+        if (Math.abs(jy) > 0.15) throttle += jy;
+        if (Math.abs(jx) > 0.15) steer += jx;
+        throttle = Math.max(-1, Math.min(1, throttle));
+        steer = Math.max(-1, Math.min(1, steer));
+
+        if (throttle > 0.05) carState.speed += carState.accel * throttle * delta;
+        else if (throttle < -0.05) carState.speed += carState.accel * throttle * 1.2 * delta;
+        else { carState.speed *= (1 - 1.8 * delta); if (Math.abs(carState.speed) < 0.2) carState.speed = 0; }
+        carState.speed = Math.max(-carState.reverseSpeed, Math.min(carState.maxSpeed, carState.speed));
+
+        if (Math.abs(carState.speed) > 0.4) {
+            const dirSign = Math.sign(carState.speed);
+            carState.heading -= steer * carState.turnRate * delta * dirSign;
+        }
+
+        const vx = Math.sin(carState.heading) * carState.speed * delta;
+        const vz = Math.cos(carState.heading) * carState.speed * delta;
+        const nx = playerCar.position.x + vx;
+        const nz = playerCar.position.z + vz;
+        if (!hitsBuilding(nx, playerCar.position.z, CAR_R)) playerCar.position.x = nx; else carState.speed *= 0.3;
+        if (!hitsBuilding(playerCar.position.x, nz, CAR_R)) playerCar.position.z = nz; else carState.speed *= 0.3;
+
+        const gY = groundHeightAt(playerCar.position.x, playerCar.position.z);
+        playerCar.position.y = gY + 0.02;
+        playerCar.rotation.y = carState.heading;
+        yaw = carState.heading + Math.PI;
+
+        camTarget.set(playerCar.position.x, playerCar.position.y + 1.7, playerCar.position.z);
+        const cosP = Math.cos(pitch);
+        const dist = CAM_DIST + 1.5 + Math.abs(carState.speed) * 0.06;
+        camOffset.set(
+            Math.sin(yaw) * cosP * dist,
+            Math.sin(pitch) * dist + CAM_HEIGHT + 0.4,
+            Math.cos(yaw) * cosP * dist
+        );
+        camera.position.copy(camTarget).add(camOffset);
+        if (camera.position.y < 0.6) camera.position.y = 0.6;
+        camera.lookAt(camTarget);
+    } else {
+        if (!uiBlocking) {
+            forwardDir.set(0, 0, -1).applyAxisAngle(Y_AXIS, yaw);
+            rightDir.set(1, 0, 0).applyAxisAngle(Y_AXIS, yaw);
+
+            let axRight = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+            let axFwd   = (keys.forward ? 1 : 0) - (keys.backward ? 1 : 0);
+            let jx = joyInput.x, jy = joyInput.y;
+            if (Math.hypot(jx, jy) < 0.14) { jx = 0; jy = 0; }
+            axRight += jx; axFwd -= jy;
+            let mag = Math.hypot(axRight, axFwd);
+            if (mag > 1) { axRight /= mag; axFwd /= mag; mag = 1; }
+
+            moveDir.set(0, 0, 0);
+            moveDir.addScaledVector(forwardDir, axFwd);
+            moveDir.addScaledVector(rightDir, axRight);
+
+            const isMoving = mag > 0.03;
+            const speed = (keys.run ? RUN_SPD : WALK_SPD) * mag;
+
+            if (isMoving) {
+                moveDir.normalize();
+                const nx = player.position.x + moveDir.x * speed * delta;
+                const nz = player.position.z + moveDir.z * speed * delta;
+                if (!hitsBuilding(nx, player.position.z, PLAYER_R)) player.position.x = nx;
+                if (!hitsBuilding(player.position.x, nz, PLAYER_R)) player.position.z = nz;
+                const targetRot = Math.atan2(moveDir.x, moveDir.z);
+                let diff = targetRot - player.rotation.y;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                player.rotation.y += diff * Math.min(1, delta * 12);
+            }
+
+            const groundY = groundHeightAt(player.position.x, player.position.z);
+            yVel += GRAVITY * delta;
+            player.position.y += yVel * delta;
+            if (player.position.y <= groundY) { player.position.y = groundY; yVel = 0; isGrounded = true; }
+
+            if (isMoving) walkPhase += delta * (speed * 0.55 + 2.0);
+            else walkPhase += delta * 2.2;
+
+            const amp = isMoving ? (keys.run ? 0.95 : 0.62) * mag : 0.0;
+            const legSwing = Math.sin(walkPhase) * amp;
+            const armSwing = Math.sin(walkPhase) * amp * 0.8;
+            legL.rotation.x = legSwing;
+            legR.rotation.x = -legSwing;
+            armL.rotation.x = -armSwing;
+            armR.rotation.x = armSwing;
+        }
+
+        camTarget.set(player.position.x, player.position.y + 1.6, player.position.z);
+        const cosP = Math.cos(pitch);
+        camOffset.set(
+            Math.sin(yaw) * cosP * CAM_DIST,
+            Math.sin(pitch) * CAM_DIST + CAM_HEIGHT,
+            Math.cos(yaw) * cosP * CAM_DIST
+        );
+        camera.position.copy(camTarget).add(camOffset);
+        if (camera.position.y < 0.6) camera.position.y = 0.6;
+        camera.lookAt(camTarget);
+    }
+
+    sky.position.copy(camera.position);
+
+    /* سيارات المرور */
+    aiCars.forEach(car => {
+        const u = car.userData;
+        u.pos += u.dir * u.speed * delta;
+        const tooFar = (u.axis === 'x' && Math.abs(car.position.x - player.position.x) > 280) ||
+                       (u.axis === 'z' && Math.abs(car.position.z - player.position.z) > 280);
+        if (u.pos < u.minPos || u.pos > u.maxPos || tooFar) { assignCarPath(car); return; }
+        if (u.axis === 'x') car.position.x = u.pos;
+        else car.position.z = u.pos;
+    });
+
+    /* المشاة */
+    pedestrians.forEach(p => {
+        const u = p.userData;
+        if (!u) return;
+        u.t += u.speed * delta;
+        if (u.t >= 1) { assignPedTarget(p); u.t = 0; return; }
+        const pos = u.start.clone().lerp(u.end, u.t);
+        p.position.copy(pos);
+        const dir = u.end.clone().sub(u.start).normalize();
+        const targetRot = Math.atan2(dir.x, dir.z);
+        let diff = targetRot - p.rotation.y;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        p.rotation.y += diff * Math.min(1, delta * 6);
+        u.phase += delta * 6;
+        p.position.y = CURB_H + Math.abs(Math.sin(u.phase)) * 0.06;
+        if (Math.abs(p.position.x - player.position.x) > 220 ||
+            Math.abs(p.position.z - player.position.z) > 220) {
+            assignPedTarget(p);
+        }
+    });
+
+    /* اللاعبون البعيدون */
+    mp.remotePlayers.forEach(rp => {
+        rp.currentPos.lerp(rp.targetPos, Math.min(1, delta * 10));
+        rp.group.position.copy(rp.currentPos);
+        let diff = rp.targetRot - rp.currentRot;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        rp.currentRot += diff * Math.min(1, delta * 10);
+        rp.group.rotation.y = rp.currentRot;
+
+        if (rp.group.visible) {
+            const moving = rp.currentPos.distanceTo(rp.targetPos) > 0.05;
+            const amp = moving ? 0.6 : 0;
+            const t = performance.now() * 0.008;
+            const ud = rp.group.userData;
+            ud.armL.rotation.x = -Math.sin(t) * amp * 0.8;
+            ud.armR.rotation.x =  Math.sin(t) * amp * 0.8;
+            ud.legL.rotation.x =  Math.sin(t) * amp;
+            ud.legR.rotation.x = -Math.sin(t) * amp;
+        }
+    });
+
+    /* إرسال الحالة */
+    if (mp.connected && mp.roomCode) {
+        mp.lastSyncTime += delta;
+        if (mp.lastSyncTime >= mp.syncInterval) {
+            mp.lastSyncTime = 0;
+            broadcastState();
+        }
+    }
+
+    /* نص التلميح */
+    if (uiBlocking) promptEl.classList.remove('show');
+    else if (inCar) {
+        promptText.textContent = 'للخروج من العربية';
+        promptEl.classList.add('show');
+    } else if (nearHomeDoor()) {
+        promptText.textContent = 'للدخول وتغيير الملابس';
+        promptEl.classList.add('show');
+    } else if (nearPlayerCar()) {
+        promptText.textContent = 'لقيادة العربية';
+        promptEl.classList.add('show');
+    } else promptEl.classList.remove('show');
+
+    renderer.render(scene, camera);
+}
+
+/* ============================================================
+   تشغيل
+   ============================================================ */
+updateCityAround(player.position.x, player.position.z);
+lastCityI = Math.round(player.position.x / CELL - 0.5);
+lastCityJ = Math.round(player.position.z / CELL - 0.5);
+
+window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+});
+
+window.addEventListener('beforeunload', () => {
+    if (socket && socket.connected) socket.emit('leaveRoom');
+});
+
+animate();
+</script>
+</body>
+</html>
